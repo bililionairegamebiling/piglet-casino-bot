@@ -80,15 +80,21 @@ def setup_bot():
         # Process regular commands
         await bot.process_commands(message)
     
-    # Load gambling cog
+    # Load cogs
     @bot.event
     async def setup_hook():
         """Asynchronous setup for the bot."""
         try:
+            # Load the gambling cog
             from cogs.gambling import Gambling
             await bot.add_cog(Gambling(bot))
             logger.info("Loaded Gambling cog")
+            
+            # Load the animated slots cog
+            from cogs.animated_slots import AnimatedSlots
+            await bot.add_cog(AnimatedSlots(bot))
+            logger.info("Loaded AnimatedSlots cog")
         except Exception as e:
-            logger.error(f"Error loading Gambling cog: {e}")
+            logger.error(f"Error loading cogs: {e}")
     
     return bot
