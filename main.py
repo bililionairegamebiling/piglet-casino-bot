@@ -3,6 +3,7 @@ import logging
 import threading
 from flask import Flask, render_template, jsonify
 from bot import setup_bot
+from models import db
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, 
@@ -11,6 +12,28 @@ logger = logging.getLogger(__name__)
 
 # Flask app
 app = Flask(__name__)
+
+# Setup Flask app configuration
+# Make sure DATABASE_URL is set, and print its value for debugging
+db_url = os.environ.get("DATABASE_URL")
+logger.info(f"Database URL: {db_url}")
+
+if not db_url:
+    raise ValueError("DATABASE_URL environment variable not set")
+
+app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_recycle": 300,
+    "pool_pre_ping": True,
+}
+
+# Initialize database
+db.init_app(app)
+
+# Create database tables
+with app.app_context():
+    db.create_all()
+    logger.info("Database tables created successfully.")
 
 @app.route('/')
 def index():
