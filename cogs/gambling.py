@@ -4,9 +4,9 @@ from discord import app_commands
 import logging
 import re
 import os
-import json
 from utils.currency import parse_bet, format_currency
 from utils.slots import run_slots_game
+from utils.db_service import get_user_balance, update_user_balance, get_or_create_user, check_daily_reward, get_leaderboard
 
 logger = logging.getLogger(__name__)
 
@@ -15,36 +15,9 @@ class Gambling(commands.Cog):
     
     def __init__(self, bot):
         self.bot = bot
-        self.data_dir = "data"
-        self.balances_file = os.path.join(self.data_dir, "user_balances.json")
-        
-        # Create data directory if it doesn't exist
-        os.makedirs(self.data_dir, exist_ok=True)
-        
-        # Load user balances
-        self.user_balances = self._load_balances()
-        
-        # Default starting balance for new users
+        # Default starting balance for new users (handled in db_service now)
         self.default_balance = 1000
-    
-    def _load_balances(self):
-        """Load user balances from json file."""
-        try:
-            if os.path.exists(self.balances_file):
-                with open(self.balances_file, 'r') as f:
-                    return json.load(f)
-            return {}
-        except Exception as e:
-            logger.error(f"Error loading balances: {e}")
-            return {}
-    
-    def _save_balances(self):
-        """Save user balances to json file."""
-        try:
-            with open(self.balances_file, 'w') as f:
-                json.dump(self.user_balances, f, indent=4)
-        except Exception as e:
-            logger.error(f"Error saving balances: {e}")
+        logger.info("Gambling cog initialized with database support")
     
     def get_balance(self, user_id):
         """
@@ -57,35 +30,37 @@ class Gambling(commands.Cog):
             int: User's current balance
         """
         user_id = str(user_id)
-        if user_id not in self.user_balances:
-            self.user_balances[user_id] = self.default_balance
-            self._save_balances()
-        
-        return self.user_balances[user_id]
+        return get_user_balance(user_id)
     
-    def update_balance(self, user_id, amount):
+    def update_balance(self, user_id, amount, game_type="general", details=None):
         """
         Update user balance by adding or subtracting an amount.
         
         Args:
             user_id (str): Discord user ID
             amount (int): Amount to add (positive) or subtract (negative)
+            game_type (str): Type of game ('slots', 'animated_slots', etc.)
+            details (str, optional): Additional details about the transaction
             
         Returns:
             int: New balance
         """
         user_id = str(user_id)
-        current = self.get_balance(user_id)
-        new_balance = current + amount
         
-        # Ensure balance doesn't go below zero
-        if new_balance < 0:
-            new_balance = 0
-            
-        self.user_balances[user_id] = new_balance
-        self._save_balances()
+        # Get user from guild if possible to record username
+        try:
+            user = self.bot.get_user(int(user_id))
+            username = user.name if user else f"User_{user_id}"
+        except:
+            username = f"User_{user_id}"
         
-        return new_balance
+        # Ensure we don't go below zero (handled in db_service, but double check)
+        if amount < 0:
+            current = get_user_balance(user_id)
+            if current + amount < 0:
+                amount = -current  # Only subtract what's available
+        
+        return update_user_balance(user_id, username, amount, game_type, details)
     
     @app_commands.command(
         name="slots",
@@ -116,14 +91,14 @@ class Gambling(commands.Cog):
             return
         
         # Update balance (deduct bet)
-        self.update_balance(user_id, -bet_amount)
+        self.update_balance(user_id, -bet_amount, "slots", "Bet placed")
         
         # Run slots game
         result, visual, winnings, win_details = run_slots_game(bet_amount)
         
         # Update balance with winnings if any
         if winnings > 0:
-            self.update_balance(user_id, winnings)
+            self.update_balance(user_id, winnings, "slots", f"Win: {win_details}")
         
         # Create result embed
         new_balance = self.get_balance(user_id)
@@ -154,20 +129,113 @@ class Gambling(commands.Cog):
             return
         
         # Update balance (deduct bet)
-        self.update_balance(user_id, -bet_amount)
+        self.update_balance(user_id, -bet_amount, "slots", "Bet placed")
         
         # Run slots game
         result, visual, winnings, win_details = run_slots_game(bet_amount)
         
         # Update balance with winnings if any
         if winnings > 0:
-            self.update_balance(user_id, winnings)
+            self.update_balance(user_id, winnings, "slots", f"Win: {win_details}")
         
         # Create result embed
         new_balance = self.get_balance(user_id)
         embed = self._create_slots_embed(message.author, bet_amount, result, visual, winnings, win_details, new_balance)
         
         await message.reply(embed=embed)
+    
+    @app_commands.command(
+        name="balance",
+        description="Check your current balance"
+    )
+    async def balance(self, interaction: discord.Interaction):
+        """Command to check your balance."""
+        user_id = str(interaction.user.id)
+        balance = self.get_balance(user_id)
+        
+        embed = discord.Embed(
+            title="💰 Casino Balance 💰",
+            description=f"Your current balance is **{format_currency(balance)}**",
+            color=discord.Color.gold()
+        )
+        
+        embed.set_author(name=f"{interaction.user.name}'s Balance", icon_url=interaction.user.display_avatar.url)
+        embed.set_footer(text="Piglet Casino | Try your luck with /slots!")
+        
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+    
+    @app_commands.command(
+        name="daily",
+        description="Collect your daily reward"
+    )
+    async def daily(self, interaction: discord.Interaction):
+        """Command to collect daily reward."""
+        user_id = str(interaction.user.id)
+        username = interaction.user.name
+        
+        success, message, amount = check_daily_reward(user_id, username)
+        
+        if success:
+            color = discord.Color.green()
+            title = "✅ Daily Reward Claimed"
+        else:
+            color = discord.Color.red()
+            title = "❌ Daily Reward Not Available"
+        
+        embed = discord.Embed(
+            title=title,
+            description=message,
+            color=color
+        )
+        
+        embed.set_author(name=f"{interaction.user.name}'s Daily Reward", icon_url=interaction.user.display_avatar.url)
+        
+        if success:
+            balance = self.get_balance(user_id)
+            embed.add_field(name="Current Balance", value=format_currency(balance), inline=True)
+        
+        embed.set_footer(text="Piglet Casino | Try your luck with /slots!")
+        
+        await interaction.response.send_message(embed=embed)
+    
+    @app_commands.command(
+        name="leaderboard",
+        description="See the richest players in the casino"
+    )
+    async def leaderboard(self, interaction: discord.Interaction):
+        """Command to view the leaderboard of richest players."""
+        await interaction.response.defer()
+        
+        top_users = get_leaderboard(10)
+        
+        if not top_users:
+            await interaction.followup.send("No users found on the leaderboard yet.")
+            return
+        
+        embed = discord.Embed(
+            title="🏆 Casino Leaderboard 🏆",
+            description="The richest players in Piglet Casino",
+            color=discord.Color.gold()
+        )
+        
+        for i, user in enumerate(top_users, 1):
+            # Try to get Discord username
+            try:
+                discord_user = self.bot.get_user(int(user.id))
+                display_name = discord_user.name if discord_user else user.username
+            except:
+                display_name = user.username
+            
+            emoji = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
+            embed.add_field(
+                name=f"{emoji} {display_name}",
+                value=format_currency(user.balance),
+                inline=False
+            )
+        
+        embed.set_footer(text="Piglet Casino | Try your luck with /slots!")
+        
+        await interaction.followup.send(embed=embed)
     
     def _create_slots_embed(self, user, bet_amount, result, visual, winnings, win_details, new_balance):
         """Create an embed for slots result."""
@@ -195,3 +263,7 @@ class Gambling(commands.Cog):
         embed.set_footer(text="Piglet Casino | Try your luck again with /slots!")
         
         return embed
+
+async def setup(bot):
+    """Setup function for the cog."""
+    await bot.add_cog(Gambling(bot))
