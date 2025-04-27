@@ -8,16 +8,18 @@ logger = logging.getLogger(__name__)
 SYMBOL_SIZE = 180
 REEL_WIDTH = 200
 BACKGROUND_COLOR = (40, 40, 40, 255)  # Dark gray background
+
+# These colors are fallbacks in case images aren't available
 SYMBOL_COLORS = {
-    "7️⃣": (255, 215, 0, 255),     # Gold
-    "💎": (0, 191, 255, 255),      # Deep sky blue
-    "🎰": (255, 69, 0, 255),       # Red-orange
-    "🔔": (255, 215, 0, 255),      # Gold
-    "👞": (139, 69, 19, 255),      # Brown
-    "🍋": (255, 255, 0, 255),      # Yellow
-    "🍉": (255, 0, 0, 255),        # Red
-    "❤️": (255, 0, 0, 255),        # Red
-    "🍒": (139, 0, 0, 255),        # Dark red
+    "SEVEN": (255, 0, 0, 255),     # Red
+    "DIAMOND": (0, 191, 255, 255), # Deep sky blue
+    "BAR": (255, 120, 0, 255),     # Orange
+    "BELL": (255, 215, 0, 255),    # Gold
+    "SHOE": (139, 69, 19, 255),    # Brown
+    "LEMON": (255, 255, 0, 255),   # Yellow
+    "MELON": (255, 0, 0, 255),     # Red
+    "HEART": (255, 0, 0, 255),     # Red
+    "CHERRY": (139, 0, 0, 255),    # Dark red
 }
 
 def generate_slots_assets():
@@ -45,12 +47,12 @@ def generate_slots_assets():
 def _generate_reel_image(output_path):
     """Generate the slot machine reel image with all symbols."""
     # Get symbols from slots module
-    from utils.slots import PAYOUTS
-    symbols = list(PAYOUTS.keys())
+    from utils.slots import PAYOUTS, SYMBOLS
+    symbol_keys = list(PAYOUTS.keys())
     
     # Calculate reel height (symbols repeated in blocks of 6)
     num_blocks = 6
-    reel_height = SYMBOL_SIZE * len(symbols) * num_blocks
+    reel_height = SYMBOL_SIZE * len(symbol_keys) * num_blocks
     
     # Create a new image for the reel
     reel = Image.new('RGBA', (REEL_WIDTH, reel_height), BACKGROUND_COLOR)
@@ -58,17 +60,19 @@ def _generate_reel_image(output_path):
     
     # Try to get a font for drawing text (use default if not available)
     try:
-        font = ImageFont.truetype("Arial", 120)
+        font = ImageFont.truetype("Arial", 80)
     except IOError:
         font = ImageFont.load_default()
     
     # Draw each symbol multiple times to create blocks
     for block in range(num_blocks):
-        for i, symbol in enumerate(symbols):
-            y_pos = (block * len(symbols) + i) * SYMBOL_SIZE
+        for i, symbol_key in enumerate(symbol_keys):
+            y_pos = (block * len(symbol_keys) + i) * SYMBOL_SIZE
+            
+            symbol_data = SYMBOLS[symbol_key]
             
             # Draw symbol background
-            color = SYMBOL_COLORS.get(symbol, (255, 255, 255, 255))
+            color = SYMBOL_COLORS.get(symbol_key, (255, 255, 255, 255))
             draw.rectangle(
                 (10, y_pos + 10, REEL_WIDTH - 10, y_pos + SYMBOL_SIZE - 10),
                 fill=(color[0], color[1], color[2], 100),  # Semi-transparent
@@ -76,27 +80,51 @@ def _generate_reel_image(output_path):
                 width=2
             )
             
-            # Get text size - Pillow's newer versions use get_text_dimensions instead of textsize
+            # Try to use the image file if available
+            if symbol_data.get("image_available") == "yes" and "path" in symbol_data:
+                try:
+                    # Load the symbol image
+                    img_path = symbol_data["path"]
+                    symbol_img = Image.open(img_path).convert("RGBA")
+                    
+                    # Resize to fit in symbol box
+                    max_img_size = SYMBOL_SIZE - 40  # Leave some padding
+                    symbol_img = symbol_img.resize((max_img_size, max_img_size), Image.LANCZOS)
+                    
+                    # Calculate position to center the image
+                    img_x = REEL_WIDTH // 2 - max_img_size // 2
+                    img_y = y_pos + SYMBOL_SIZE // 2 - max_img_size // 2
+                    
+                    # Paste the image onto the reel
+                    reel.paste(symbol_img, (img_x, img_y), symbol_img)
+                    continue  # Skip the text drawing below
+                except Exception as e:
+                    logger.warning(f"Failed to load image for {symbol_key}: {e}")
+            
+            # Fallback to emoji text if image loading failed
+            emoji = symbol_data.get("emoji", "?")
+            
+            # Get text size for centering
             try:
                 # For newer Pillow versions
                 if hasattr(draw, "textbbox"):
-                    bbox = draw.textbbox((0, 0), symbol, font=font)
+                    bbox = draw.textbbox((0, 0), emoji, font=font)
                     text_width = bbox[2] - bbox[0]
                     text_height = bbox[3] - bbox[1]
                 # Fallback for any version
                 else:
                     # Use simple estimation based on font size
-                    font_size = 120
+                    font_size = 80
                     text_width = font_size
                     text_height = font_size
             except:
                 # Fallback dimensions
-                text_width, text_height = 100, 100
+                text_width, text_height = 80, 80
             
-            # Draw the symbol text
+            # Draw the emoji text as fallback
             draw.text(
                 (REEL_WIDTH // 2 - text_width // 2, y_pos + SYMBOL_SIZE // 2 - text_height // 2),
-                symbol,
+                emoji,
                 fill=(255, 255, 255, 255),
                 font=font
             )

@@ -24,10 +24,10 @@ for symbol_key, symbol_data in SYMBOLS.items():
     file_path = Path(f"assets/slot_symbols/{symbol_data['file']}")
     if not file_path.exists():
         logger.warning(f"Image file for {symbol_key} not found: {file_path}")
-        # Set image_available flag
-        symbol_data["image_available"] = False
+        # Set image_available flag as string to avoid type issues
+        symbol_data["image_available"] = "no"
     else:
-        symbol_data["image_available"] = True
+        symbol_data["image_available"] = "yes"
         symbol_data["path"] = str(file_path)
 
 # Define slots symbols and their payout rates

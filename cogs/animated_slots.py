@@ -10,7 +10,7 @@ import tempfile
 
 from utils.currency import parse_bet, format_currency
 from utils.image_generator import generate_slots_assets
-from utils.slots import PAYOUTS
+from utils.slots import PAYOUTS, SYMBOLS
 
 logger = logging.getLogger(__name__)
 
@@ -39,14 +39,24 @@ class AnimatedSlots(commands.Cog):
         """Get the symbol string from its index."""
         symbols = list(PAYOUTS.keys())
         if index is not None and 0 <= index < len(symbols):
+            symbol_key = symbols[index]
+            return SYMBOLS[symbol_key]["emoji"]  # Return emoji for display
+        else:
+            # Return default symbol if index is invalid
+            return SYMBOLS["CHERRY"]["emoji"]
+    
+    def get_symbol_key_from_index(self, index):
+        """Get the symbol key from its index."""
+        symbols = list(PAYOUTS.keys())
+        if index is not None and 0 <= index < len(symbols):
             return symbols[index]
         else:
             # Return default symbol if index is invalid
-            return "🍒"
+            return "CHERRY"
     
     def calculate_win(self, s1, s2, s3):
         """Calculate win based on symbol indices."""
-        # Convert indices to actual symbols
+        # Convert indices to actual symbol keys
         symbols = list(PAYOUTS.keys())
         sym1 = symbols[s1 % 9]
         sym2 = symbols[s2 % 9]
