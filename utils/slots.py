@@ -30,17 +30,17 @@ for symbol_key, symbol_data in SYMBOLS.items():
         symbol_data["image_available"] = "yes"
         symbol_data["path"] = str(file_path)
 
-# Define slots symbols and their payout rates
+# Define slots symbols and their payout rates (in multiplier format)
 PAYOUTS = {
-    "SEVEN": {3: 500, 2: 25},
-    "DIAMOND": {3: 25, 2: 10},
-    "BAR": {3: 5, 2: 3},
-    "BELL": {3: 3, 2: 2},
-    "SHOE": {3: 2, 2: 1},
-    "LEMON": {3: 1, 2: 1},
-    "MELON": {3: 0.75, 2: 1},
-    "HEART": {3: 0.5, 2: 0.75},
-    "CHERRY": {3: 0.5, 2: 0.25},
+    "SEVEN": {3: 500, 2: 25},      # x3=50000:100 (500x), x2=2500:100 (25x)
+    "DIAMOND": {3: 25, 2: 10},     # x3=2500:100 (25x), x2=1000:100 (10x)
+    "BAR": {3: 5, 2: 3},           # x3=500:100 (5x), x2=300:100 (3x)
+    "BELL": {3: 3, 2: 2},          # x3=300:100 (3x), x2=200:100 (2x)
+    "SHOE": {3: 2, 2: 1},          # x3=200:100 (2x), x2=100:100 (1x)
+    "LEMON": {3: 1, 2: 1},         # x3=100:100 (1x), x2=100:100 (1x)
+    "MELON": {3: 0.75, 2: 1},      # x3=300:400 (0.75x), x2=100:100 (1x)
+    "HEART": {3: 0.5, 2: 0.75},    # x3=100:200 (0.5x), x2=300:400 (0.75x)
+    "CHERRY": {3: 0.5, 2: 0.25},   # x3=100:200 (0.5x), x2=100:400 (0.25x)
 }
 
 # Define probabilities for each symbol (higher value = less frequent)

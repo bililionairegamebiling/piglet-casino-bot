@@ -67,14 +67,22 @@ def setup_bot():
             if any(keyword in content for keyword in slots_keywords):
                 # Extract bet amount
                 parts = content.split()
+                bet = "1"  # Default bet amount
                 try:
+                    # Find the slots keyword in the message
                     for i, part in enumerate(parts):
-                        if part.lower() in slots_keywords and i + 1 < len(parts):
-                            bet = parts[i + 1]
-                            cog = bot.get_cog("Gambling")
-                            if cog:
-                                await cog.slots_command(message, bet)
+                        if part.lower() in slots_keywords:
+                            # Look for bet amount after the command
+                            if i + 1 < len(parts):
+                                bet = parts[i + 1]
                             break
+                    
+                    # Get the gambling cog and run the slots command
+                    cog = bot.get_cog("Gambling")
+                    if cog:
+                        # For debugging
+                        logger.info(f"Executing slots command with bet: {bet}")
+                        await cog.slots_command(message, bet)
                 except Exception as e:
                     logger.error(f"Error processing slots command: {e}")
                 return
