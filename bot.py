@@ -74,7 +74,89 @@ def setup_bot():
                                 await cog.slots_command(message, bet)
                             break
                 except Exception as e:
-                    logger.error(f"Error processing mention command: {e}")
+                    logger.error(f"Error processing slots command: {e}")
+                return
+                
+            # Check for coinflip commands
+            if any(cmd in content for cmd in [" coinflip ", " coin ", " flip "]):
+                parts = content.split()
+                try:
+                    bet_str = "1"  # Default bet
+                    choice = "heads"  # Default choice
+                    
+                    for i, part in enumerate(parts):
+                        if part.lower() in ["coinflip", "coin", "flip"]:
+                            # Look for choice and bet amount after the command
+                            for j in range(i + 1, min(len(parts), i + 4)):
+                                if parts[j].lower() in ["heads", "head", "h"]:
+                                    choice = "heads"
+                                elif parts[j].lower() in ["tails", "tail", "t"]:
+                                    choice = "tails"
+                                elif parts[j].isdigit() or parts[j].lower() in ["all", "max"]:
+                                    bet_str = parts[j]
+                            
+                            # Call the coinflip method
+                            import random
+                            from utils.currency import parse_bet, format_currency
+                            from utils.db_service import get_user_balance, update_user_balance
+                            
+                            user_id = str(message.author.id)
+                            username = message.author.name
+                            
+                            # Parse bet and validate
+                            balance = get_user_balance(user_id)
+                            try:
+                                bet_amount = parse_bet(bet_str, balance)
+                            except ValueError as e:
+                                await message.channel.send(f"Error: {str(e)}")
+                                break
+                            
+                            if bet_amount <= 0:
+                                await message.channel.send("Bet amount must be greater than 0.")
+                                break
+                            
+                            if bet_amount > balance:
+                                await message.channel.send(f"You don't have enough funds! Your balance is {format_currency(balance)}.")
+                                break
+                            
+                            # Deduct bet
+                            update_user_balance(user_id, username, -bet_amount, "coinflip", "Bet placed")
+                            
+                            # Flip the coin
+                            result = random.choice(["heads", "tails"])
+                            result_emoji = "🟡" if result == "heads" else "⚪"
+                            
+                            # Determine win/loss
+                            win = choice == result
+                            if win:
+                                winnings = bet_amount  # 1x profit
+                                update_user_balance(user_id, username, bet_amount * 2, "coinflip", f"Win: {result}")
+                                await message.channel.send(f"🪙 The coin landed on **{result.upper()}** {result_emoji}! You won {format_currency(winnings)}! New balance: {format_currency(get_user_balance(user_id))}")
+                            else:
+                                await message.channel.send(f"🪙 The coin landed on **{result.upper()}** {result_emoji}! You lost {format_currency(bet_amount)}. New balance: {format_currency(get_user_balance(user_id))}")
+                            
+                            break
+                except Exception as e:
+                    logger.error(f"Error processing coinflip command: {e}")
+                    await message.channel.send("Error processing coinflip command. Try using the slash command `/coinflip` instead.")
+                return
+                
+            # Check for blackjack commands
+            if any(cmd in content for cmd in [" blackjack ", " bj ", " 21 "]):
+                parts = content.split()
+                try:
+                    bet_str = "1"  # Default bet
+                    
+                    for i, part in enumerate(parts):
+                        if part.lower() in ["blackjack", "bj", "21"] and i + 1 < len(parts):
+                            bet_str = parts[i + 1]
+                            
+                            # Redirect to the slash command for blackjack
+                            await message.channel.send(f"Starting a blackjack game with bet: {bet_str}. Use the slash command `/blackjack {bet_str}` for a better experience with buttons!")
+                            break
+                except Exception as e:
+                    logger.error(f"Error processing blackjack command: {e}")
+                    await message.channel.send("Error processing blackjack command. Try using the slash command `/blackjack` instead.")
                 return
         
         # Process regular commands
@@ -99,6 +181,11 @@ def setup_bot():
             from cogs.gambling_extras import GamblingExtras
             await bot.add_cog(GamblingExtras(bot))
             logger.info("Loaded GamblingExtras cog")
+            
+            # Load blackjack cog
+            from cogs.blackjack import Blackjack
+            await bot.add_cog(Blackjack(bot))
+            logger.info("Loaded Blackjack cog")
         except Exception as e:
             logger.error(f"Error loading cogs: {e}")
     

@@ -123,6 +123,19 @@ def get_leaderboard(limit=10):
     """
     return User.query.order_by(User.balance.desc()).limit(limit).all()
 
+def get_user_transactions(user_id, limit=10):
+    """
+    Get recent transactions for a user.
+    
+    Args:
+        user_id (str): Discord user ID
+        limit (int): Maximum number of transactions to return
+        
+    Returns:
+        list: List of Transaction objects
+    """
+    return Transaction.query.filter_by(user_id=user_id).order_by(Transaction.timestamp.desc()).limit(limit).all()
+
 def check_daily_reward(user_id, username):
     """
     Check if user can claim daily reward and process it if possible.

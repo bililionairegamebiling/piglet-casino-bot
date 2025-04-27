@@ -3,8 +3,9 @@ from discord.ext import commands
 from discord import app_commands
 import logging
 import random
+from datetime import datetime, timedelta
 from utils.currency import parse_bet, format_currency
-from utils.db_service import check_work_reward, get_user_balance, update_user_balance
+from utils.db_service import check_work_reward, get_user_balance, update_user_balance, get_user_transactions, get_or_create_user
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +127,98 @@ class GamblingExtras(commands.Cog):
         embed.set_footer(text="Piglet Casino | Try your luck again with /coinflip!")
         
         await interaction.followup.send(embed=embed)
+    
+    @app_commands.command(
+        name="profile",
+        description="View your casino profile and transaction history"
+    )
+    async def profile(self, interaction: discord.Interaction):
+        """Command to view user profile and transaction history."""
+        user_id = str(interaction.user.id)
+        username = interaction.user.name
+        
+        # Get user and transaction data
+        user = get_or_create_user(user_id, username)
+        transactions = get_user_transactions(user_id, limit=5)
+        balance = user.balance
+        
+        # Create embed
+        embed = discord.Embed(
+            title="🎰 Casino Profile",
+            description=f"Here's your casino profile information, {interaction.user.mention}!",
+            color=discord.Color.gold()
+        )
+        
+        embed.set_author(name=f"{username}'s Profile", icon_url=interaction.user.display_avatar.url)
+        
+        # Add main stats
+        embed.add_field(name="Balance", value=format_currency(balance), inline=True)
+        embed.add_field(name="Account Age", value=f"{(datetime.utcnow() - user.created_at).days} days", inline=True)
+        
+        # Add reward timers
+        daily_status = "Available Now! 🎁" 
+        if user.last_daily:
+            time_since_daily = datetime.utcnow() - user.last_daily
+            if time_since_daily < timedelta(hours=20):
+                time_left = timedelta(hours=20) - time_since_daily
+                hours = int(time_left.total_seconds() // 3600)
+                minutes = int((time_left.total_seconds() % 3600) // 60)
+                daily_status = f"Available in {hours}h {minutes}m ⏳"
+        
+        work_status = "Available Now! 💼"
+        if user.last_work:
+            time_since_work = datetime.utcnow() - user.last_work
+            if time_since_work < timedelta(minutes=10):
+                time_left = timedelta(minutes=10) - time_since_work
+                minutes = int(time_left.total_seconds() // 60)
+                seconds = int(time_left.total_seconds() % 60)
+                work_status = f"Available in {minutes}m {seconds}s ⏳"
+                
+        embed.add_field(name="Daily Reward", value=daily_status, inline=True)
+        embed.add_field(name="Work Reward", value=work_status, inline=True)
+        
+        # Add recent transactions if available
+        if transactions:
+            embed.add_field(name="\u200b", value="\u200b", inline=False)  # Spacer
+            embed.add_field(name="Recent Transactions", value="\u200b", inline=False)
+            
+            for transaction in transactions:
+                # Format timestamp
+                time_ago = datetime.utcnow() - transaction.timestamp
+                if time_ago < timedelta(minutes=1):
+                    time_str = "just now"
+                elif time_ago < timedelta(hours=1):
+                    time_str = f"{int(time_ago.total_seconds() // 60)}m ago"
+                elif time_ago < timedelta(days=1):
+                    time_str = f"{int(time_ago.total_seconds() // 3600)}h ago"
+                else:
+                    time_str = f"{time_ago.days}d ago"
+                
+                # Format amount with color and sign
+                if transaction.amount > 0:
+                    amount_str = f"**+{format_currency(transaction.amount)}**"
+                else:
+                    amount_str = f"**-{format_currency(abs(transaction.amount))}**"
+                
+                # Format game type
+                game_type = transaction.game_type.replace('_', ' ').title()
+                
+                # Add transaction field
+                embed.add_field(
+                    name=f"{game_type} ({time_str})",
+                    value=f"{amount_str} - {transaction.details or 'No details'}",
+                    inline=False
+                )
+        else:
+            embed.add_field(
+                name="Recent Transactions", 
+                value="No recent transactions found.", 
+                inline=False
+            )
+        
+        embed.set_footer(text="Piglet Casino | Try your luck with /slots, /coinflip, or /blackjack!")
+        
+        await interaction.response.send_message(embed=embed)
         
 async def setup(bot):
     """Setup function for the cog."""
