@@ -1,33 +1,59 @@
 import random
 import logging
+import os
 from collections import Counter
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+# Define slot symbols with corresponding image files and emojis
+SYMBOLS = {
+    "SEVEN": {"emoji": "7️⃣", "file": "sseven.png", "name": "Seven"},
+    "DIAMOND": {"emoji": "💎", "file": "sdiamond.png", "name": "Diamond"},
+    "BAR": {"emoji": "🎰", "file": "sbar.png", "name": "Bar"},
+    "BELL": {"emoji": "🔔", "file": "sbell.png", "name": "Bell"},
+    "SHOE": {"emoji": "👞", "file": "sshoe.png", "name": "Horseshoe"},
+    "LEMON": {"emoji": "🍋", "file": "slemon.png", "name": "Lemon"},
+    "MELON": {"emoji": "🍉", "file": "smelon.png", "name": "Watermelon"},
+    "HEART": {"emoji": "❤️", "file": "sheart.png", "name": "Heart"},
+    "CHERRY": {"emoji": "🍒", "file": "scherry.png", "name": "Cherry"},
+}
+
+# Verify that all image files exist
+for symbol_key, symbol_data in SYMBOLS.items():
+    file_path = Path(f"assets/slot_symbols/{symbol_data['file']}")
+    if not file_path.exists():
+        logger.warning(f"Image file for {symbol_key} not found: {file_path}")
+        # Set image_available flag
+        symbol_data["image_available"] = False
+    else:
+        symbol_data["image_available"] = True
+        symbol_data["path"] = str(file_path)
+
 # Define slots symbols and their payout rates
 PAYOUTS = {
-    "7️⃣": {3: 500, 2: 25},
-    "💎": {3: 25, 2: 10},
-    "🎰": {3: 5, 2: 3},
-    "🔔": {3: 3, 2: 2},
-    "👞": {3: 2, 2: 1},
-    "🍋": {3: 1, 2: 1},
-    "🍉": {3: 0.75, 2: 1},
-    "❤️": {3: 0.5, 2: 0.75},
-    "🍒": {3: 0.5, 2: 0.25},
+    "SEVEN": {3: 500, 2: 25},
+    "DIAMOND": {3: 25, 2: 10},
+    "BAR": {3: 5, 2: 3},
+    "BELL": {3: 3, 2: 2},
+    "SHOE": {3: 2, 2: 1},
+    "LEMON": {3: 1, 2: 1},
+    "MELON": {3: 0.75, 2: 1},
+    "HEART": {3: 0.5, 2: 0.75},
+    "CHERRY": {3: 0.5, 2: 0.25},
 }
 
 # Define probabilities for each symbol (higher value = less frequent)
 SYMBOL_WEIGHTS = {
-    "7️⃣": 1,    # Rarest
-    "💎": 2, 
-    "🎰": 4,
-    "🔔": 6,
-    "👞": 10,
-    "🍋": 14,
-    "🍉": 16,
-    "❤️": 20,
-    "🍒": 25,    # Most common
+    "SEVEN": 1,    # Rarest
+    "DIAMOND": 2, 
+    "BAR": 4,
+    "BELL": 6,
+    "SHOE": 10,
+    "LEMON": 14,
+    "MELON": 16,
+    "HEART": 20,
+    "CHERRY": 25,  # Most common
 }
 
 def generate_slots_result():
@@ -62,7 +88,10 @@ def format_visual_result(result):
     """
     visual = []
     for row in result:
-        visual.append(" ".join(row))
+        row_emojis = []
+        for symbol_key in row:
+            row_emojis.append(SYMBOLS[symbol_key]["emoji"])
+        visual.append(" ".join(row_emojis))
     
     return "\n".join(visual)
 
@@ -125,7 +154,9 @@ def calculate_payout(counter):
             payout = PAYOUTS[symbol][count]
             if payout > best_payout:
                 best_payout = payout
-                win_details = f"{count}x {symbol} ({payout}x)"
+                symbol_name = SYMBOLS[symbol]["name"]
+                symbol_emoji = SYMBOLS[symbol]["emoji"]
+                win_details = f"{count}x {symbol_name} {symbol_emoji} ({payout}x)"
     
     return best_payout, win_details
 
