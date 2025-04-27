@@ -1,7 +1,7 @@
 [project]
-name = "repl-nix-workspace"
+name = "piglet-casino-bot"
 version = "0.1.0"
-description = "Add your description here"
+description = "A Discord bot for playing casino games."
 requires-python = ">=3.11"
 dependencies = [
     "discord-py>=2.5.2",
