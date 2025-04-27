@@ -83,10 +83,12 @@ def _generate_reel_image(output_path):
                     bbox = draw.textbbox((0, 0), symbol, font=font)
                     text_width = bbox[2] - bbox[0]
                     text_height = bbox[3] - bbox[1]
-                # For older Pillow versions (deprecated)
+                # Fallback for any version
                 else:
-                    # Use getsize instead of textsize for older versions
-                    text_width, text_height = font.getsize(symbol) if font else (100, 100)
+                    # Use simple estimation based on font size
+                    font_size = 120
+                    text_width = font_size
+                    text_height = font_size
             except:
                 # Fallback dimensions
                 text_width, text_height = 100, 100

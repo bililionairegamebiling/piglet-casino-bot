@@ -82,7 +82,7 @@ class AnimatedSlots(commands.Cog):
             elif sym2 == sym3:
                 matching_symbol = sym2
                 
-            if matching_symbol in PAYOUTS and 2 in PAYOUTS[matching_symbol]:
+            if matching_symbol is not None and matching_symbol in PAYOUTS and 2 in PAYOUTS[matching_symbol]:
                 result["win"] = True
                 result["symbol"] = matching_symbol
                 result["count"] = 2
