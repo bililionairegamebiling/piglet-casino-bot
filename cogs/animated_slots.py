@@ -201,7 +201,11 @@ class AnimatedSlots(commands.Cog):
             # Process results
             if win_result["win"]:
                 winnings = int(bet_amount * win_result["multiplier"])
-                win_details = f"{win_result['count']}x {win_result['symbol']} ({win_result['multiplier']}x)"
+                # Get friendly symbol name and emoji
+                symbol_key = win_result["symbol"]
+                symbol_name = SYMBOLS[symbol_key]["name"]
+                symbol_emoji = SYMBOLS[symbol_key]["emoji"]
+                win_details = f"{win_result['count']}x {symbol_name} {symbol_emoji} ({win_result['multiplier']}x)"
                 self.gambling_cog.update_balance(user_id, winnings, "animated_slots", f"Win: {win_details}")
                 result = ('won', winnings)
             else:
@@ -350,7 +354,11 @@ class AnimatedSlots(commands.Cog):
             # Process results
             if win_result["win"]:
                 winnings = int(bet_amount * win_result["multiplier"])
-                win_details = f"{win_result['count']}x {win_result['symbol']} ({win_result['multiplier']}x)"
+                # Get friendly symbol name and emoji
+                symbol_key = win_result["symbol"]
+                symbol_name = SYMBOLS[symbol_key]["name"]
+                symbol_emoji = SYMBOLS[symbol_key]["emoji"]
+                win_details = f"{win_result['count']}x {symbol_name} {symbol_emoji} ({win_result['multiplier']}x)"
                 self.gambling_cog.update_balance(user_id, winnings, "animated_slots", f"Win: {win_details}")
                 result = ('won', winnings)
             else:
