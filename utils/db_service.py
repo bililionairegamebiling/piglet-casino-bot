@@ -160,3 +160,59 @@ def check_daily_reward(user_id, username):
     minutes = int((seconds_left % 3600) // 60)
     
     return False, f"You can claim your next daily reward in {hours}h {minutes}m", None
+
+def check_work_reward(user_id, username):
+    """
+    Check if user can claim work reward and process it if possible.
+    Work reward is available every 10 minutes.
+    
+    Args:
+        user_id (str): Discord user ID
+        username (str): Discord username
+        
+    Returns:
+        tuple: (bool success, str message, int amount or None)
+    """
+    user = get_or_create_user(user_id, username)
+    
+    now = datetime.utcnow()
+    
+    # Check if last_work is None
+    if user.last_work is None:
+        user.last_work = datetime(2000, 1, 1)  # Set to distant past to allow immediate work
+        db.session.commit()
+    
+    # If user has never worked or last work was more than 10 minutes ago
+    if not user.last_work or (now - user.last_work).total_seconds() > 10 * 60:
+        # Give reward (random amount between 50-200)
+        import random
+        reward = random.randint(50, 200)
+        
+        # Update user record
+        user.balance += reward
+        user.last_work = now
+        db.session.commit()
+        
+        # Record transaction
+        add_transaction(user_id, reward, 'work', 'Work reward')
+        
+        # Generate a work message
+        work_messages = [
+            f"You worked hard at the casino and earned {reward} coins!",
+            f"You helped clean the slot machines and earned {reward} coins!",
+            f"You served drinks to gamblers and received {reward} coins in tips!",
+            f"You fixed a broken slot machine and got paid {reward} coins!",
+            f"You dealt cards at the blackjack table and earned {reward} coins!",
+            f"You welcomed guests at the casino entrance and earned {reward} coins!",
+            f"You worked as a cashier and earned {reward} coins!"
+        ]
+        
+        message = random.choice(work_messages)
+        return True, message, reward
+    
+    # Calculate time until next reward
+    seconds_left = 10 * 60 - (now - user.last_work).total_seconds()
+    minutes = int(seconds_left // 60)
+    seconds = int(seconds_left % 60)
+    
+    return False, f"You can work again in {minutes}m {seconds}s", None

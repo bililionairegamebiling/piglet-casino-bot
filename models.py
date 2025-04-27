@@ -17,6 +17,7 @@ class User(db.Model):
     username = db.Column(db.String(128), nullable=False)
     balance = db.Column(db.Integer, default=1000)
     last_daily = db.Column(db.DateTime, nullable=True)
+    last_work = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     transactions = db.relationship('Transaction', backref='user', lazy=True)
 

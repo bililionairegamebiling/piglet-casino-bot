@@ -94,6 +94,11 @@ def setup_bot():
             from cogs.animated_slots import AnimatedSlots
             await bot.add_cog(AnimatedSlots(bot))
             logger.info("Loaded AnimatedSlots cog")
+            
+            # Load gambling extras cog
+            from cogs.gambling_extras import GamblingExtras
+            await bot.add_cog(GamblingExtras(bot))
+            logger.info("Loaded GamblingExtras cog")
         except Exception as e:
             logger.error(f"Error loading cogs: {e}")
     
