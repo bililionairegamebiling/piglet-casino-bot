@@ -40,6 +40,53 @@ def index():
     """Homepage route that displays bot status and info."""
     return render_template('index.html')
 
+@app.route('/admin')
+def admin():
+    """Admin panel to view database information."""
+    from models import User, Transaction
+    from sqlalchemy import func, and_, desc
+    
+    # Get top users by balance
+    top_users = User.query.order_by(User.balance.desc()).limit(10).all()
+    
+    # Get statistics
+    total_users = User.query.count()
+    total_transactions = Transaction.query.count()
+    
+    # Calculate total bets and winnings
+    stats = {
+        'total_bets': 0,
+        'total_winnings': 0
+    }
+    
+    # Get sum of negative transactions (bets)
+    bet_sum = db.session.query(func.sum(Transaction.amount)).filter(Transaction.amount < 0).scalar()
+    # Get sum of positive transactions (winnings)
+    win_sum = db.session.query(func.sum(Transaction.amount)).filter(Transaction.amount > 0).scalar()
+    
+    stats['total_bets'] = abs(bet_sum) if bet_sum else 0
+    stats['total_winnings'] = win_sum if win_sum else 0
+    
+    # Get recent transactions
+    recent_transactions = Transaction.query.join(User).order_by(Transaction.timestamp.desc()).limit(20).all()
+    
+    # Format currency for display
+    def currency_filter(value):
+        if value >= 0:
+            return f"+{value:,}"
+        else:
+            return f"{value:,}"
+    
+    # Register filter with Jinja2
+    app.jinja_env.filters['currency'] = currency_filter
+    
+    return render_template('admin.html', 
+                          top_users=top_users,
+                          total_users=total_users,
+                          total_transactions=total_transactions,
+                          stats=stats,
+                          recent_transactions=recent_transactions)
+
 @app.route('/api/status')
 def status():
     """API route to check bot status."""

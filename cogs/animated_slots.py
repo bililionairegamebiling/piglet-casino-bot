@@ -28,13 +28,9 @@ class AnimatedSlots(commands.Cog):
     async def on_ready(self):
         """On ready, get reference to Gambling cog."""
         self.gambling_cog = self.bot.get_cog("Gambling")
-        if not self.gambling_cog:
-            logger.warning("Gambling cog not found, animated slots will have limited functionality")
     
     def get_symbol_index(self, position):
         """Get the symbol at a given position on the reel."""
-        # Each symbol is SYMBOL_SIZE pixels tall, and there are 9 symbols total
-        # repeated in 6 blocks, so 54 total positions
         symbol_index = position % 9  # 9 different symbols
         # Convert to 0-based index in PAYOUTS keys
         return symbol_index
@@ -124,7 +120,7 @@ class AnimatedSlots(commands.Cog):
             return
         
         # Update balance (deduct bet)
-        self.gambling_cog.update_balance(user_id, -bet_amount)
+        self.gambling_cog.update_balance(user_id, -bet_amount, "animated_slots", "Bet placed")
         
         # Run slots animation
         try:
@@ -195,9 +191,9 @@ class AnimatedSlots(commands.Cog):
             # Process results
             if win_result["win"]:
                 winnings = int(bet_amount * win_result["multiplier"])
-                self.gambling_cog.update_balance(user_id, winnings)
-                result = ('won', winnings)
                 win_details = f"{win_result['count']}x {win_result['symbol']} ({win_result['multiplier']}x)"
+                self.gambling_cog.update_balance(user_id, winnings, "animated_slots", f"Win: {win_details}")
+                result = ('won', winnings)
             else:
                 result = ('lost', bet_amount)
                 win_details = None
@@ -273,7 +269,7 @@ class AnimatedSlots(commands.Cog):
             return
         
         # Update balance (deduct bet)
-        self.gambling_cog.update_balance(user_id, -bet_amount)
+        self.gambling_cog.update_balance(user_id, -bet_amount, "animated_slots", "Bet placed")
         
         # Run slots animation
         try:
@@ -344,9 +340,9 @@ class AnimatedSlots(commands.Cog):
             # Process results
             if win_result["win"]:
                 winnings = int(bet_amount * win_result["multiplier"])
-                self.gambling_cog.update_balance(user_id, winnings)
-                result = ('won', winnings)
                 win_details = f"{win_result['count']}x {win_result['symbol']} ({win_result['multiplier']}x)"
+                self.gambling_cog.update_balance(user_id, winnings, "animated_slots", f"Win: {win_details}")
+                result = ('won', winnings)
             else:
                 result = ('lost', bet_amount)
                 win_details = None
