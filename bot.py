@@ -62,12 +62,14 @@ def setup_bot():
             content = message.content.lower()
             
             # Check for slots commands
-            if any(cmd in content for cmd in [" slots ", " sl ", " slot "]):
+            slots_keywords = ["slots", "sl", "slot"]
+            # Check if any of the slots keywords are in the content
+            if any(keyword in content for keyword in slots_keywords):
                 # Extract bet amount
                 parts = content.split()
                 try:
                     for i, part in enumerate(parts):
-                        if part.lower() in ["slots", "sl", "slot"] and i + 1 < len(parts):
+                        if part.lower() in slots_keywords and i + 1 < len(parts):
                             bet = parts[i + 1]
                             cog = bot.get_cog("Gambling")
                             if cog:
@@ -78,14 +80,15 @@ def setup_bot():
                 return
                 
             # Check for coinflip commands
-            if any(cmd in content for cmd in [" coinflip ", " coin ", " flip "]):
+            coinflip_keywords = ["coinflip", "coin", "flip"]
+            if any(keyword in content for keyword in coinflip_keywords):
                 parts = content.split()
                 try:
                     bet_str = "1"  # Default bet
                     choice = "heads"  # Default choice
                     
                     for i, part in enumerate(parts):
-                        if part.lower() in ["coinflip", "coin", "flip"]:
+                        if part.lower() in coinflip_keywords:
                             # Look for choice and bet amount after the command
                             for j in range(i + 1, min(len(parts), i + 4)):
                                 if parts[j].lower() in ["heads", "head", "h"]:
@@ -142,13 +145,14 @@ def setup_bot():
                 return
                 
             # Check for blackjack commands
-            if any(cmd in content for cmd in [" blackjack ", " bj ", " 21 "]):
+            blackjack_keywords = ["blackjack", "bj", "21"]
+            if any(keyword in content for keyword in blackjack_keywords):
                 parts = content.split()
                 try:
                     bet_str = "1"  # Default bet
                     
                     for i, part in enumerate(parts):
-                        if part.lower() in ["blackjack", "bj", "21"] and i + 1 < len(parts):
+                        if part.lower() in blackjack_keywords and i + 1 < len(parts):
                             bet_str = parts[i + 1]
                             
                             # Redirect to the slash command for blackjack
